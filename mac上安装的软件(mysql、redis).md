@@ -1,6 +1,11 @@
 [github]
+#修改hosts文件
+sudo su 
+输入密码：1212
+#进入编辑
 vim /etc/hosts
-添加：
+
+#添加：
 http://github.com 204.232.175.94 
 http://gist.github.com 107.21.116.220 
 http://help.github.com 207.97.227.252 
