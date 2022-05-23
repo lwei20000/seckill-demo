@@ -4,6 +4,8 @@ sudo su
 输入密码：1212
 #进入编辑
 vim /etc/hosts
+#Note：梁威的token（注意此token只显示一次）
+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
 
 #添加：
 http://github.com 204.232.175.94 
