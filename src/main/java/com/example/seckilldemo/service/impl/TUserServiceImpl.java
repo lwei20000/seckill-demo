@@ -9,6 +9,7 @@ import com.example.seckilldemo.service.ITUserService;
 import com.example.seckilldemo.utils.CookieUtil;
 import com.example.seckilldemo.utils.MD5Util;
 import com.example.seckilldemo.utils.UUIDUtil;
+import com.example.seckilldemo.utils.ValidatorUtil;
 import com.example.seckilldemo.vo.LoginVo;
 import com.example.seckilldemo.vo.RespBean;
 import com.example.seckilldemo.vo.RespBeanEnum;
@@ -41,51 +42,87 @@ public class TUserServiceImpl extends ServiceImpl<TUserMapper, TUser> implements
     @Autowired
     private RedisTemplate redisTemplate;
 
+    /**
+     * 登陆验证
+     *
+     * @param loginVo
+     * @param request
+     * @param response
+     * @return
+     */
     @Override
     public RespBean doLongin(LoginVo loginVo, HttpServletRequest request, HttpServletResponse response) {
         String mobile = loginVo.getMobile();
         String password = loginVo.getPassword();
-        //参数校验
-//        if (StringUtils.isEmpty(mobile) || StringUtils.isEmpty(password)) {
-//            throw new GlobalException(RespBeanEnum.LOGIN_ERROR);
-//        }
-        //TODO 因为我懒测试的时候，把手机号码和密码长度校验去掉了，可以打开。页面和实体类我也注释了，记得打开
-//        if (!ValidatorUtil.isMobile(mobile)) {
-//            return RespBean.error(RespBeanEnum.MOBILE_ERROR);
-//        }
 
+        //参数校验
+        if (StringUtils.isEmpty(mobile) || StringUtils.isEmpty(password)) {
+            throw new GlobalException(RespBeanEnum.LOGIN_ERROR);
+        }
+
+        //TODO 因为我懒测试的时候，把手机号码和密码长度校验去掉了，可以打开。页面和实体类我也注释了，记得打开
+        if (!ValidatorUtil.isMobile(mobile)) {
+            return RespBean.error(RespBeanEnum.MOBILE_ERROR);
+        }
+
+        // 查询用户信息
         TUser user = tUserMapper.selectById(mobile);
         if (user == null) {
             throw new GlobalException(RespBeanEnum.LOGIN_ERROR);
         }
-//        System.out.println(MD5Util.formPassToDBPass(password, user.getSalt()));
+        System.out.println(MD5Util.formPassToDBPass(password, user.getSalt()));
+
         //判断密码是否正确
         if (!MD5Util.formPassToDBPass(password, user.getSalt()).equals(user.getPassword())) {
             throw new GlobalException(RespBeanEnum.LOGIN_ERROR);
         }
-        //生成Cookie
-        String userTicket = UUIDUtil.uuid();
-        //将用户信息存入redis
-        redisTemplate.opsForValue().set("user:" + userTicket, user);
 
-//        request.getSession().setAttribute(userTicket, user);
-        CookieUtil.setCookie(request, response, "userTicket", userTicket);
-        return RespBean.success(userTicket);
+        //生成Cookie，放到session中
+//        String ticket = UUIDUtil.uuid();
+//        request.getSession().setAttribute(ticket, user);
+//        CookieUtil.setCookie(request, response, "userTicket", ticket);
 
+        //生成Cookie，放到redis中
+        String ticket = UUIDUtil.uuid();
+        redisTemplate.opsForValue().set("user:" + ticket, user);
+        CookieUtil.setCookie(request, response, "userTicket", ticket);
+
+        return RespBean.success();
     }
 
+    /**
+     * 根据cookie获取用户信息
+     *
+     * @param userTicket
+     * @param request
+     * @param response
+     * @return
+     */
     @Override
     public TUser getUserByCookie(String userTicket, HttpServletRequest request, HttpServletResponse response) {
         if (StringUtils.isEmpty(userTicket)) {
             return null;
         }
+
+        // 从redis中获取用户
         TUser user = (TUser) redisTemplate.opsForValue().get("user:" + userTicket);
+
+        // 用户信息放入cookie中
         if (user != null) {
             CookieUtil.setCookie(request, response, "userTicket", userTicket);
         }
         return user;
     }
 
+    /**
+     * 更新密码
+     *
+     * @param userTicket
+     * @param password
+     * @param request
+     * @param response
+     * @return
+     */
     @Override
     public RespBean updatePassword(String userTicket, String password, HttpServletRequest request, HttpServletResponse response) {
         TUser user = getUserByCookie(userTicket, request, response);

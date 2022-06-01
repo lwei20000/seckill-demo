@@ -51,6 +51,14 @@ public class LoginController {
     }
 
 
+    /**
+     * 登陆功能
+     *
+     * @param loginVo
+     * @param request
+     * @param response
+     * @return
+     */
     @ApiOperation("登录接口")
     @RequestMapping(value = "/doLogin", method = RequestMethod.POST)
     @ResponseBody

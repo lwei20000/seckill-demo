@@ -23,16 +23,17 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Autowired
     private UserArgumentResolver userArgumentResolver;
+
     @Autowired
     private AccessLimitInterceptor accessLimitInterceptor;
 
     @Override
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
-//        WebMvcConfigurer.super.addArgumentResolvers(resolvers);
+        // WebMvcConfigurer.super.addArgumentResolvers(resolvers);
         resolvers.add(userArgumentResolver);
     }
 
-    //静态资源展示
+    // 静态资源展示
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/**").addResourceLocations("classpath:/static/");

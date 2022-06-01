@@ -55,33 +55,22 @@ public class TOrderServiceImpl extends ServiceImpl<TOrderMapper, TOrder> impleme
     @Autowired
     private RedisTemplate redisTemplate;
 
+    /**
+     * 秒杀
+     * @param user    用户对象
+     * @param goodsVo 商品对象
+     * @return
+     */
     @Transactional
     @Override
     public TOrder secKill(TUser user, GoodsVo goodsVo) {
-        ValueOperations valueOperations = redisTemplate.opsForValue();
 
+        // 取得秒杀商品
         TSeckillGoods seckillGoods = itSeckillGoodsService.getOne(new QueryWrapper<TSeckillGoods>().eq("goods_id", goodsVo.getId()));
-        seckillGoods.setStockCount(seckillGoods.getStockCount() - 1);
-//        itSeckillGoodsService.updateById(seckillGoods);
-//        boolean seckillGoodsResult = itSeckillGoodsService.update(new UpdateWrapper<TSeckillGoods>()
-//                .set("stock_count", seckillGoods.getStockCount())
-//                .eq("id", seckillGoods.getId())
-//                .gt("stock_count", 0)
-//        );
-        boolean seckillGoodsResult = itSeckillGoodsService.update(new UpdateWrapper<TSeckillGoods>()
-                .setSql("stock_count = " + "stock_count-1")
-                .eq("goods_id", goodsVo.getId())
-                .gt("stock_count", 0)
-        );
-//        if (!seckillGoodsResult) {
-//            return null;
-//        }
 
-        if (seckillGoods.getStockCount() < 1) {
-            //判断是否还有库存
-            valueOperations.set("isStockEmpty:" + goodsVo.getId(), "0");
-            return null;
-        }
+        // 设置库存
+        seckillGoods.setStockCount(seckillGoods.getStockCount() - 1);
+        itSeckillGoodsService.updateById(seckillGoods);
 
         //生成订单
         TOrder order = new TOrder();
@@ -95,13 +84,13 @@ public class TOrderServiceImpl extends ServiceImpl<TOrderMapper, TOrder> impleme
         order.setStatus(0);
         order.setCreateDate(new Date());
         tOrderMapper.insert(order);
+
         //生成秒杀订单
         TSeckillOrder tSeckillOrder = new TSeckillOrder();
         tSeckillOrder.setUserId(user.getId());
         tSeckillOrder.setOrderId(order.getId());
         tSeckillOrder.setGoodsId(goodsVo.getId());
         itSeckillOrderService.save(tSeckillOrder);
-        redisTemplate.opsForValue().set("order:" + user.getId() + ":" + goodsVo.getId(), tSeckillOrder);
         return order;
     }
 

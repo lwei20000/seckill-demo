@@ -43,12 +43,13 @@ public final class CookieUtil {
         try {
             for (int i = 0; i < cookieList.length; i++) {
                 if (cookieList[i].getName().equals(cookieName)) {
-                    if (isDecoder) {
-                        retValue = URLDecoder.decode(cookieList[i].getValue(), "UTF-8");
-                    } else {
-                        retValue = cookieList[i].getValue();
+                    if( !cookieList[i].getValue().equals(null)) {
+                        if (isDecoder) {
+                            retValue = URLDecoder.decode(cookieList[i].getValue(), "UTF-8");
+                        } else {
+                            retValue = cookieList[i].getValue();
+                        }
                     }
-                    break;
                 }
             }
         } catch (UnsupportedEncodingException e) {
@@ -208,6 +209,12 @@ public final class CookieUtil {
             if (serverName.startsWith("http://")) {
                 serverName = serverName.substring(7);
             }
+
+            // added by lwei
+            if(serverName.startsWith("127.0.0.1")) {
+                return "127.0.0.1";
+            }
+
             int end = serverName.length();
             // 判断url地址是否包含"/"
             if (serverName.contains("/")) {
