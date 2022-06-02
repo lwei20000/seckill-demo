@@ -36,6 +36,11 @@ public class TUserController {
     @Autowired
     private MQSender mqSender;
 
+    /**
+     * Jmeter测试
+     * @param user
+     * @return
+     */
     @RequestMapping(value = "/info", method = RequestMethod.GET)
     @ResponseBody
     @ApiOperation("返回用户信息")
