@@ -6,7 +6,6 @@ sudo su
 vim /etc/hosts
 #Note：梁威的token（注意此token只显示一次）
 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
-
 #添加：
 http://github.com 204.232.175.94 
 http://gist.github.com 107.21.116.220 
@@ -21,6 +20,7 @@ http://www.github.com
 lwdeMacBook-Pro:bin weiliang$ pwd
 /Users/weiliang/Documents/tool-for-mac/apache-jmeter-5.4.3/bin
 lwdeMacBook-Pro:bin weiliang$ sh jmeter.sh
+# 当并发多少的时候，QPS能达到多少/TPS是多少
 
 [mac安装rabbitmq]
 # 在终端输入下面指令

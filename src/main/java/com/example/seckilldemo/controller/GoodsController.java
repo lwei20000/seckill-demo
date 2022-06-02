@@ -24,6 +24,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -104,8 +105,11 @@ public class GoodsController {
     @RequestMapping(value = "/toList1.3", produces = "text/html;charset=utf-8", method = RequestMethod.GET)
     public String toList(Model model, TUser user) {
 
+        List<GoodsVo> godsVoList = itGoodsService.findGoodsVo();
         model.addAttribute("user", user);
-        model.addAttribute("goodsList", itGoodsService.findGoodsVo());
+        model.addAttribute("goodsList", godsVoList);
+
+        System.out.println("===================>" + godsVoList.size());
         return "goodsList";
     }
 

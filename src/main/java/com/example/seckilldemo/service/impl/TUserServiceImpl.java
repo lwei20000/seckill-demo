@@ -55,15 +55,15 @@ public class TUserServiceImpl extends ServiceImpl<TUserMapper, TUser> implements
         String mobile = loginVo.getMobile();
         String password = loginVo.getPassword();
 
-        //参数校验
+        //参数非空校验
         if (StringUtils.isEmpty(mobile) || StringUtils.isEmpty(password)) {
             throw new GlobalException(RespBeanEnum.LOGIN_ERROR);
         }
 
-        //TODO 因为我懒测试的时候，把手机号码和密码长度校验去掉了，可以打开。页面和实体类我也注释了，记得打开
-        if (!ValidatorUtil.isMobile(mobile)) {
-            return RespBean.error(RespBeanEnum.MOBILE_ERROR);
-        }
+        //手机号码格式校验
+//        if (!ValidatorUtil.isMobile(mobile)) {
+//            return RespBean.error(RespBeanEnum.MOBILE_ERROR);
+//        }
 
         // 查询用户信息
         TUser user = tUserMapper.selectById(mobile);
@@ -87,7 +87,7 @@ public class TUserServiceImpl extends ServiceImpl<TUserMapper, TUser> implements
         redisTemplate.opsForValue().set("user:" + ticket, user);
         CookieUtil.setCookie(request, response, "userTicket", ticket);
 
-        return RespBean.success();
+        return RespBean.success(ticket);
     }
 
     /**
