@@ -146,7 +146,10 @@ public class SecKillController implements InitializingBean {
     }
 
     /**
-     * 秒杀功能-废弃
+     * 秒杀功能
+     *
+     * 优化以前QPS：1783
+     *
      *
      * @param model
      * @param user
