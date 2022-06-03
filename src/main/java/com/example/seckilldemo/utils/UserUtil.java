@@ -42,7 +42,7 @@ public class UserUtil {
 
 
         // 插入数据库
-        //insertToDB(users);
+        insertToDB(users);
 
         // 登陆，生成token
         createToken(users);

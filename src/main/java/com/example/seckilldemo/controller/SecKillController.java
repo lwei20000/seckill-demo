@@ -185,6 +185,8 @@ public class SecKillController implements InitializingBean {
         model.addAttribute("order", tOrder);
         model.addAttribute("goods", goodsVo);
 
+        System.out.println("》》》》》》》》》》》》》》》》》 秒杀成功");
+
         // 订单详情页
         return "orderDetail";
     }

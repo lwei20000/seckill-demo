@@ -57,6 +57,8 @@ public class TOrderServiceImpl extends ServiceImpl<TOrderMapper, TOrder> impleme
 
     /**
      * 秒杀
+     * mac优化前QPS 1657
+     *
      * @param user    用户对象
      * @param goodsVo 商品对象
      * @return
@@ -73,25 +75,25 @@ public class TOrderServiceImpl extends ServiceImpl<TOrderMapper, TOrder> impleme
         itSeckillGoodsService.updateById(seckillGoods);
 
         //生成订单
-        TOrder order = new TOrder();
-        order.setUserId(user.getId());
-        order.setGoodsId(goodsVo.getId());
-        order.setDeliveryAddrId(0L);
-        order.setGoodsName(goodsVo.getGoodsName());
-        order.setGoodsCount(1);
-        order.setGoodsPrice(seckillGoods.getSeckillPrice());
-        order.setOrderChannel(1);
-        order.setStatus(0);
-        order.setCreateDate(new Date());
-        tOrderMapper.insert(order);
+        TOrder tOrder = new TOrder();
+        tOrder.setUserId(user.getId());
+        tOrder.setGoodsId(goodsVo.getId());
+        tOrder.setDeliveryAddrId(0L);
+        tOrder.setGoodsName(goodsVo.getGoodsName());
+        tOrder.setGoodsCount(1);
+        tOrder.setGoodsPrice(seckillGoods.getSeckillPrice());
+        tOrder.setOrderChannel(1);
+        tOrder.setStatus(0);
+        tOrder.setCreateDate(new Date());
+        tOrderMapper.insert(tOrder);
 
         //生成秒杀订单
         TSeckillOrder tSeckillOrder = new TSeckillOrder();
         tSeckillOrder.setUserId(user.getId());
-        tSeckillOrder.setOrderId(order.getId());
+        tSeckillOrder.setOrderId(tOrder.getId());
         tSeckillOrder.setGoodsId(goodsVo.getId());
         itSeckillOrderService.save(tSeckillOrder);
-        return order;
+        return tOrder;
     }
 
     @Override
