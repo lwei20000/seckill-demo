@@ -71,7 +71,33 @@ public class TOrderServiceImpl extends ServiceImpl<TOrderMapper, TOrder> impleme
 
         // 设置库存
         seckillGoods.setStockCount(seckillGoods.getStockCount() - 1);
-        itSeckillGoodsService.updateById(seckillGoods);
+
+        // 未解决库存超卖
+        //itSeckillGoodsService.updateById(seckillGoods);
+
+        // 解决库存超卖(有问题)
+        /*boolean seckillGoodsResult = itSeckillGoodsService.update(new UpdateWrapper<TSeckillGoods>()
+                .set("stock_count", seckillGoods.getStockCount())  // 设置库存
+                .eq("goods_id", seckillGoods.getId())                    // 条件：根据id更新
+                .gt("stock_count", 0)                              // 确保库存大于0
+        );
+
+        if(!seckillGoodsResult) {
+            return null;
+        }
+        */
+
+        // 解决库存超卖(有问题)
+        boolean seckillGoodsResult = itSeckillGoodsService.update(new UpdateWrapper<TSeckillGoods>()
+                .setSql("stock_count = stock_count - 1")           // 设置库存
+                .eq("goods_id", seckillGoods.getId())             // 条件：根据id更新
+                .gt("stock_count", 0)                   // 确保库存大于0
+        );
+        if(!seckillGoodsResult) {
+            return null;
+        }
+
+        // 解决重复秒杀：同一个用户秒杀多个商品，是通过数据库的唯一索引来解决的。
 
         //生成订单
         TOrder tOrder = new TOrder();
@@ -92,6 +118,10 @@ public class TOrderServiceImpl extends ServiceImpl<TOrderMapper, TOrder> impleme
         tSeckillOrder.setOrderId(tOrder.getId());
         tSeckillOrder.setGoodsId(goodsVo.getId());
         itSeckillOrderService.save(tSeckillOrder);
+
+        // 秒杀订单存储到redis中
+        redisTemplate.opsForValue().set("order" + user.getId()+":"+goodsVo.getId(), tSeckillOrder);
+
         return tOrder;
     }
 

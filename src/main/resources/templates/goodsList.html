@@ -32,7 +32,8 @@
             <td th:text="${goods.goodsPrice}"></td>
             <td th:text="${goods.seckillPrice}"></td>
             <td th:text="${goods.stockCount}"></td>
-            <td><a th:href="'/goods/toDetail1.2/'+${goods.id}">详情</a></td>
+            <!--<td><a th:href="'/goods/toDetail1.2/'+${goods.id}">详情</a></td>--> <!--templates/goodsDetail.html thymeleaf框架-->
+            <td><a th:href="'/goodsDetail2.html?goodsId='+${goods.id}">详情</a></td> <!--static/goodsDetail2.html-->
         </tr>
     </table>
 </div>

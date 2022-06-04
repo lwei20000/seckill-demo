@@ -159,8 +159,8 @@ public class SecKillController implements InitializingBean {
      * @operation add
      * @date 11:36 上午 2022/3/4
      **/
-    @ApiOperation("秒杀功能-废弃")
-    @RequestMapping(value = "/doSeckill", method = RequestMethod.POST)
+    @ApiOperation("秒杀功能")
+    @RequestMapping(value = "/doSeckill1.0", method = RequestMethod.POST)
     public String doSecKill(Model model, TUser user, Long goodsId) {
 
         if(user == null) {
@@ -178,6 +178,7 @@ public class SecKillController implements InitializingBean {
 
         // 判断是否重复抢购
         TSeckillOrder seckillOrder = itSeckillOrderService.getOne(new QueryWrapper<TSeckillOrder>().eq("user_id", user.getId()).eq("goods_id", goodsId));
+
         if (seckillOrder != null) {
             model.addAttribute("errmsg", RespBeanEnum.REPEATE_ERROR.getMessage());
             return "secKillFail";
@@ -192,6 +193,59 @@ public class SecKillController implements InitializingBean {
 
         // 订单详情页
         return "orderDetail";
+    }
+
+    /**
+     * 秒杀功能
+     *
+     * 优化以前QPS：1783
+     *
+     *
+     * @param model
+     * @param user
+     * @param goodsId
+     * @return java.lang.String
+     * @author LC
+     * @operation add
+     * @date 11:36 上午 2022/3/4
+     **/
+    @ApiOperation("秒杀功能-废弃")
+    @RequestMapping(value = "/doSeckill2.0", method = RequestMethod.POST)
+    @ResponseBody
+    public RespBean doSecKill2(Model model, TUser user, Long goodsId) {
+
+        // 校验登陆用户
+        if(user == null) {
+            return RespBean.error(RespBeanEnum.SESSION_ERROR);
+        }
+
+        // 校验库存
+        GoodsVo goodsVo = itGoodsService.findGoodsVobyGoodsId(goodsId);
+        if (goodsVo.getStockCount() < 1) {
+            model.addAttribute("errmsg", RespBeanEnum.EMPTY_STOCK.getMessage());
+            return RespBean.error(RespBeanEnum.EMPTY_STOCK);
+        }
+
+        // 判断是否重复抢购
+
+        // 从数据库获取
+        // TSeckillOrder seckillOrder = itSeckillOrderService.getOne(new QueryWrapper<TSeckillOrder>().eq("user_id", user.getId()).eq("goods_id", goodsId));
+
+        // 从redis获取
+        TSeckillOrder seckillOrder = (TSeckillOrder)redisTemplate.opsForValue().get("order" + user.getId()+":"+goodsVo.getId());
+
+        if (seckillOrder != null) {
+            model.addAttribute("errmsg", RespBeanEnum.REPEATE_ERROR.getMessage());
+            return RespBean.error(RespBeanEnum.REPEATE_ERROR);
+        }
+
+        // 进行秒杀（扣减库存、生成订单、生成秒杀订单）
+        TOrder tOrder = orderService.secKill(user, goodsVo);
+
+        System.out.println("》》》》》》》》》》》》》》》》》 秒杀成功2.0");
+
+        // 订单详情页
+        return RespBean.success(tOrder);
     }
 
     @Override

@@ -102,6 +102,8 @@ public class GoodsController {
 
     /**
      * 商品列表页1。3
+     * QPS：885
+     *
      * @param model
      * @param user
      * @return
@@ -114,12 +116,14 @@ public class GoodsController {
         model.addAttribute("user", user);
         model.addAttribute("goodsList", godsVoList);
 
-        System.out.println("===================>" + godsVoList.size());
+        System.out.println("===================toList1。3>" + godsVoList.size());
         return "goodsList";
     }
 
     /**
      * 商品列表页1。4
+     * QPS：2426
+     *
      * @param model
      * @param user
      * @return
@@ -145,7 +149,7 @@ public class GoodsController {
             valueOperations.set("goodsList", html,60, TimeUnit.SECONDS);
         }
 
-        System.out.println("===================>" + html);
+        System.out.println("===================toList1。4>" + godsVoList.size());
         return html;
     }
 
@@ -240,7 +244,46 @@ public class GoodsController {
         return html;
     }
 
+    /**
+     * 商品详情页1.3 （页面静态化对应的接口）
+     *
+     * @param user
+     * @param goodsId
+     * @return
+     */
+    @ApiOperation("商品详情")
+    @RequestMapping(value = "/toDetail2/{goodsId}")
+    @ResponseBody
+    public RespBean toDetail2(TUser user, @PathVariable Long goodsId) {
 
+        GoodsVo goodsVo = itGoodsService.findGoodsVobyGoodsId(goodsId);
+        Date startDate = goodsVo.getStartDate();
+        Date endDate = goodsVo.getEndDate();
+        Date nowDate = new Date();
+
+        // 秒杀状态
+        int secKillStatus = 0;
+        // 秒杀剩余时间
+        int remainSeconds = 0;
+
+        if(nowDate.before(startDate)) {
+            secKillStatus = 0; // 0秒杀未开始
+            remainSeconds = (int)(startDate.getTime() - nowDate.getTime()) / 1000;
+        } else if(nowDate.after(endDate)) {
+            secKillStatus = 2; // 2秒杀已结束
+            remainSeconds = -1;
+        } else {
+            secKillStatus = 1; // 秒杀进行中
+            remainSeconds = 0;
+        }
+
+        DetailVo detailVo = new DetailVo();
+        detailVo.setTUser(user);
+        detailVo.setGoodsVo(goodsVo);
+        detailVo.setSecKillStatus(remainSeconds);
+        detailVo.setRemainSeconds(secKillStatus);
+        return RespBean.success(detailVo);
+    }
 
 
 

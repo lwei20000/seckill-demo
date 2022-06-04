@@ -1,6 +1,7 @@
 package com.example.seckilldemo.controller;
 
 import com.example.seckilldemo.entity.TUser;
+import com.example.seckilldemo.service.ITGoodsService;
 import com.example.seckilldemo.service.ITOrderService;
 import com.example.seckilldemo.vo.GoodsVo;
 import com.example.seckilldemo.vo.OrderDeatilVo;
@@ -28,15 +29,29 @@ public class TOrderController {
     @Autowired
     private ITOrderService itOrderService;
 
-
+    /**
+     * 订单详情
+     * @param tUser
+     * @param orderId
+     * @return
+     */
     @ApiOperation("订单")
     @RequestMapping(value = "/detail", method = RequestMethod.GET)
     @ResponseBody
     public RespBean detail(TUser tUser, Long orderId) {
+        if(orderId == null) {
+            // 订单信息不存在
+            return RespBean.error(RespBeanEnum.ORDER_NOT_EXIST);
+        }
         if (tUser == null) {
+            // 用户信息不存在
             return RespBean.error(RespBeanEnum.SESSION_ERROR);
         }
+
+        // 获取订单详情
         OrderDeatilVo orderDeatilVo = itOrderService.detail(orderId);
+
+        // 返回
         return RespBean.success(orderDeatilVo);
     }
 }

@@ -125,12 +125,18 @@ public class TUserServiceImpl extends ServiceImpl<TUserMapper, TUser> implements
      */
     @Override
     public RespBean updatePassword(String userTicket, String password, HttpServletRequest request, HttpServletResponse response) {
+
+        // 缓存系统中获取用户信息
         TUser user = getUserByCookie(userTicket, request, response);
         if (user == null) {
             throw new GlobalException(RespBeanEnum.MOBILE_NOT_EXIST);
         }
+
+        // 更新用户密码
         user.setPassword(MD5Util.inputPassToDBPass(password, user.getSalt()));
         int result = tUserMapper.updateById(user);
+
+        // 更新密码成功后，立即清除缓存
         if (1 == result) {
             //删除Redis
             redisTemplate.delete("user:" + userTicket);
