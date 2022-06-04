@@ -29,7 +29,6 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.thymeleaf.util.StringUtils;
-import sun.security.provider.MD5;
 
 import java.util.Date;
 import java.util.concurrent.TimeUnit;

@@ -9,7 +9,6 @@ import com.example.seckilldemo.vo.RespBean;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.apache.catalina.User;
-import org.omg.CORBA.TIMEOUT;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -44,6 +43,12 @@ public class GoodsController {
 
     @Autowired
     private ITGoodsService itGoodsService;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
+
+    @Autowired
+    private ThymeleafViewResolver thymeleafViewResolver;
 
     /**
      * 商品列表页1。1
@@ -102,7 +107,7 @@ public class GoodsController {
      * @return
      */
     @ApiOperation("商品列表")
-    @RequestMapping(value = "/toList1.3", produces = "text/html;charset=utf-8", method = RequestMethod.GET)
+    @RequestMapping(value = "/toList1.3", method = RequestMethod.GET)
     public String toList(Model model, TUser user) {
 
         List<GoodsVo> godsVoList = itGoodsService.findGoodsVo();
@@ -113,16 +118,47 @@ public class GoodsController {
         return "goodsList";
     }
 
+    /**
+     * 商品列表页1。4
+     * @param model
+     * @param user
+     * @return
+     */
+    @ApiOperation("商品列表")
+    @RequestMapping(value = "/toList1.4", produces = "text/html;charset=utf-8", method = RequestMethod.GET)
+    @ResponseBody
+    public String toList(Model model, TUser user, HttpServletRequest request, HttpServletResponse response) {
+
+        ValueOperations valueOperations = redisTemplate.opsForValue();
+        String html = (String) valueOperations.get("goodsList");
+        if(!StringUtils.isEmpty(html)) {
+            return html;
+        }
+
+        List<GoodsVo> godsVoList = itGoodsService.findGoodsVo();
+        model.addAttribute("user", user);
+        model.addAttribute("goodsList", godsVoList);
+
+        WebContext context = new WebContext(request, response, request.getServletContext(), request.getLocale(), model.asMap());
+        html = thymeleafViewResolver.getTemplateEngine().process("goodsList", context);
+        if(!StringUtils.isEmpty(html)) {
+            valueOperations.set("goodsList", html,60, TimeUnit.SECONDS);
+        }
+
+        System.out.println("===================>" + html);
+        return html;
+    }
+
 
     /**
-     * 商品详情页
+     * 商品详情页1.1
      * @param model
      * @param user
      * @param goodsId
      * @return
      */
     @ApiOperation("商品详情")
-    @RequestMapping(value = "/toDetail/{goodsId}", method = RequestMethod.GET)
+    @RequestMapping(value = "/toDetail1.1/{goodsId}", method = RequestMethod.GET)
     public String toDetail(Model model,TUser user, @PathVariable Long goodsId) {
 
         model.addAttribute("user", user);
@@ -150,6 +186,58 @@ public class GoodsController {
         model.addAttribute("remainSeconds", remainSeconds);
         model.addAttribute("goods", goodsVo);
         return "goodsDetail";
+    }
+
+    /**
+     * 商品详情页1.2
+     * @param model
+     * @param user
+     * @param goodsId
+     * @return
+     */
+    @ApiOperation("商品详情")
+    @RequestMapping(value = "/toDetail1.2/{goodsId}", produces = "text/html;charset=utf-8", method = RequestMethod.GET)
+    @ResponseBody
+    public String toDetail(Model model,TUser user, @PathVariable Long goodsId, HttpServletRequest request, HttpServletResponse response) {
+
+        ValueOperations valueOperations = redisTemplate.opsForValue();
+        String html = (String) valueOperations.get("goodsDetail" + goodsId);
+        if(!StringUtils.isEmpty(html)) {
+            return html;
+        }
+
+        model.addAttribute("user", user);
+        GoodsVo goodsVo = itGoodsService.findGoodsVobyGoodsId(goodsId);
+        Date startDate = goodsVo.getStartDate();
+        Date endDate = goodsVo.getEndDate();
+        Date nowDate = new Date();
+
+        // 秒杀状态
+        int secKillStatus = 0;
+        // 秒杀剩余时间
+        int remainSeconds = 0;
+
+        if(nowDate.before(startDate)) {
+            secKillStatus = 0; // 0秒杀未开始
+            remainSeconds = (int)(startDate.getTime() - nowDate.getTime()) / 1000;
+        } else if(nowDate.after(endDate)) {
+            secKillStatus = 2; // 2秒杀已结束
+            remainSeconds = -1;
+        } else {
+            secKillStatus = 1; // 秒杀进行中
+            remainSeconds = 0;
+        }
+        model.addAttribute("secKillStatus", secKillStatus);
+        model.addAttribute("remainSeconds", remainSeconds);
+        model.addAttribute("goods", goodsVo);
+
+        WebContext context = new WebContext(request, response, request.getServletContext(), request.getLocale(), model.asMap());
+        html = thymeleafViewResolver.getTemplateEngine().process("goodsDetail", context);
+        if(!StringUtils.isEmpty(html)) {
+            valueOperations.set("goodsDetail" + goodsId, html,60, TimeUnit.SECONDS);
+        }
+
+        return html;
     }
 
 
