@@ -81,7 +81,6 @@ public class TOrderServiceImpl extends ServiceImpl<TOrderMapper, TOrder> impleme
                 .eq("goods_id", seckillGoods.getId())                    // 条件：根据id更新
                 .gt("stock_count", 0)                              // 确保库存大于0
         );
-
         if(!seckillGoodsResult) {
             return null;
         }
