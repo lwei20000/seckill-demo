@@ -60,6 +60,10 @@ public class SecKillController implements InitializingBean {
     private ITOrderService orderService;
     @Autowired
     private RedisTemplate redisTemplate;
+    @Autowired
+    private MQSender mqSender;
+
+    private Map<Long, Boolean> emptystockMap = new HashMap<Long, Boolean>();
 
     @ApiOperation("获取验证码")
     @GetMapping(value = "/captcha")
@@ -196,10 +200,10 @@ public class SecKillController implements InitializingBean {
     }
 
     /**
-     * 秒杀功能
+     * 秒杀功能2。0
      *
      * 优化以前QPS：1783
-     *
+     * 优化以后QPS：2666
      *
      * @param model
      * @param user
@@ -209,7 +213,7 @@ public class SecKillController implements InitializingBean {
      * @operation add
      * @date 11:36 上午 2022/3/4
      **/
-    @ApiOperation("秒杀功能-废弃")
+    @ApiOperation("秒杀功能")
     @RequestMapping(value = "/doSeckill2.0", method = RequestMethod.POST)
     @ResponseBody
     public RespBean doSecKill2(Model model, TUser user, Long goodsId) {
@@ -248,8 +252,76 @@ public class SecKillController implements InitializingBean {
         return RespBean.success(tOrder);
     }
 
+    /**
+     * 秒杀功能3。0
+     *
+     * 优化以前QPS：1783
+     * 优化以后QPS：2666
+     * 消息队列QPS：3337
+     *
+     * @param model
+     * @param user
+     * @param goodsId
+     * @return java.lang.String
+     * @author LC
+     * @operation add
+     * @date 11:36 上午 2022/3/4
+     **/
+    @ApiOperation("秒杀功能")
+    @RequestMapping(value = "/doSeckill3.0", method = RequestMethod.POST)
+    @ResponseBody
+    public RespBean doSecKill3(Model model, TUser user, Long goodsId) {
+
+        // 校验登陆用户
+        if(user == null) {
+            return RespBean.error(RespBeanEnum.SESSION_ERROR);
+        }
+
+        ValueOperations valueOperations = redisTemplate.opsForValue();
+
+        // 判断是否重复抢购
+        TSeckillOrder seckillOrder = (TSeckillOrder)redisTemplate.opsForValue().get("order" + user.getId()+":"+goodsId);
+        if (seckillOrder != null) {
+            model.addAttribute("errmsg", RespBeanEnum.REPEATE_ERROR.getMessage());
+            return RespBean.error(RespBeanEnum.REPEATE_ERROR);
+        }
+        // 通过内存标记减少redis访问
+        if(emptystockMap.get(goodsId)) {
+            return RespBean.error(RespBeanEnum.EMPTY_STOCK);
+        }
+
+        // 预减库存
+        long stock = valueOperations.decrement("seckillGoods:" + goodsId);
+        if(stock < 0) {
+            emptystockMap.put(goodsId, true); // true代表没有库存
+            valueOperations.increment("seckillGoods:" + goodsId);
+            return RespBean.error(RespBeanEnum.EMPTY_STOCK);
+        }
+
+        // 下单（rabbitMQ）
+        SeckillMessage seckillMessage = new SeckillMessage(user,goodsId);
+        mqSender.sendSeckillMessage(JsonUtil.object2JsonStr(seckillMessage));
+
+        System.out.println("》》》》》》》》》》》》》》》》》 秒杀成功3.0");
+
+        // 订单详情页
+        return RespBean.success(0);
+    }
+
+    /**
+     * 系统初始化，把商品库存数量家在到redis中
+     * @throws Exception
+     */
     @Override
     public void afterPropertiesSet() throws Exception {
+        List<GoodsVo> goodsVoList = itGoodsService.findGoodsVo();
+        if(CollectionUtils.isEmpty(goodsVoList)) {
+            return;
+        }
+        goodsVoList.forEach(goodsVo -> {
+            redisTemplate.opsForValue().set("seckillGoods:" + goodsVo.getId(), goodsVo.getStockCount());
+            emptystockMap.put(goodsVo.getId(), false); // false代表有库存（预减库存的时候设置为true）
+        });
 
     }
 }

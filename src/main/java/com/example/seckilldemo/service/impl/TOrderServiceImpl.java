@@ -66,6 +66,8 @@ public class TOrderServiceImpl extends ServiceImpl<TOrderMapper, TOrder> impleme
     @Override
     public TOrder secKill(TUser user, GoodsVo goodsVo) {
 
+        ValueOperations valueOperations = redisTemplate.opsForValue();
+
         // 取得秒杀商品
         TSeckillGoods seckillGoods = itSeckillGoodsService.getOne(new QueryWrapper<TSeckillGoods>().eq("goods_id", goodsVo.getId()));
 
@@ -94,6 +96,7 @@ public class TOrderServiceImpl extends ServiceImpl<TOrderMapper, TOrder> impleme
                 .gt("stock_count", 0)                   // 确保库存大于0
         );
         if(!seckillGoodsResult) {
+            valueOperations.set("isStockEmpty:" + goodsVo.getId(), "0"); // 判断是否还有库存
             return null;
         }
 

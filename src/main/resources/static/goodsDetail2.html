@@ -110,7 +110,7 @@
     //秒杀方法
     function doSecKill(path) {
         $.ajax({
-            url: '/seckill/doSeckill2.0',
+            url: '/seckill/doSeckill3.0',
             // url: 'seckill/' + path + '/doSeckill',
             type: "POST",
             data: {
@@ -118,8 +118,11 @@
             },
             success: function (data) {
                 if (data.code == 200) {
-                    window.location.href="/orderDetail.html?orderId="+data.object.id;
-                    // getResult($("#goodsId").val());
+                    // 不用MQ的时候：正常跳转
+                    // window.location.href="/orderDetail.html?orderId="+data.object.id;
+
+                    // 用MQ时候：客户端轮询秒杀结果
+                    getResult($("#goodsId").val());
                 } else {
                     layer.msg(data.message);
                 }
@@ -130,6 +133,10 @@
         });
     }
 
+    /**
+     * 客户端轮询获取秒杀结果
+     * @param goodsId
+     */
     function getResult(goodsId) {
         g_showLoading();
         $.ajax({
@@ -150,7 +157,7 @@
                     } else {
                         layer.confirm("恭喜您，秒杀成功！查看订单？", {btn: ["确定", "取消"]},
                             function () {
-                                window.location.href = "/orderDetail.html?orderId=" + result;
+                                window.location.href = "/orderDetail2.html?orderId=" + result;
                             },
                             function () {
                                 layer.close();

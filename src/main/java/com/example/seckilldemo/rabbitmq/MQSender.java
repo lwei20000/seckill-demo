@@ -21,7 +21,6 @@ public class MQSender {
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
-
     /**
      * 发送秒杀信息
      * @author LiChao

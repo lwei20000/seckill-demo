@@ -50,9 +50,12 @@ public class MQReceiver {
     @RabbitListener(queues = "seckillQueue")
     public void receive(String message) {
         log.info("接收消息：" + message);
+
         SeckillMessage seckillMessage = JsonUtil.jsonStr2Object(message, SeckillMessage.class);
         Long goodsId = seckillMessage.getGoodsId();
         TUser user = seckillMessage.getTUser();
+
+        // 判断库存
         GoodsVo goodsVo = itGoodsServicel.findGoodsVobyGoodsId(goodsId);
         if (goodsVo.getStockCount() < 1) {
             return;
@@ -64,7 +67,6 @@ public class MQReceiver {
         }
         //下单操作
         itOrderService.secKill(user, goodsVo);
-
     }
 
 
