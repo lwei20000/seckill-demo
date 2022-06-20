@@ -36,21 +36,21 @@ public class RedisConfig {
         return redisTemplate;
     }
 
-//    @Bean
-//    public DefaultRedisScript<Boolean> script() {
-//        DefaultRedisScript<Boolean> redisScript = new DefaultRedisScript<>();
-//        //lock.lua脚本位置和application.yml同级目录
-//        redisScript.setLocation(new ClassPathResource("lock.lua"));
-//        redisScript.setResultType(Boolean.class);
-//        return redisScript;
-//    }
+    @Bean
+    public DefaultRedisScript<Boolean> lockScript() {
+        DefaultRedisScript<Boolean> lockScript = new DefaultRedisScript<>();
+        //lock.lua脚本位置和application.yml同级目录
+        lockScript.setLocation(new ClassPathResource("lock.lua"));
+        lockScript.setResultType(Boolean.class);
+        return lockScript;
+    }
 
     @Bean
-    public DefaultRedisScript<Long> script() {
-        DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>();
+    public DefaultRedisScript<Long> stockScript() {
+        DefaultRedisScript<Long> stockScript = new DefaultRedisScript<>();
         //lock.lua脚本位置和application.yml同级目录
-        redisScript.setLocation(new ClassPathResource("stock.lua"));
-        redisScript.setResultType(Long.class);
-        return redisScript;
+        stockScript.setLocation(new ClassPathResource("stock.lua"));
+        stockScript.setResultType(Long.class);
+        return stockScript;
     }
 }
