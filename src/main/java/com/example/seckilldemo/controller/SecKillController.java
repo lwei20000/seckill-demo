@@ -18,7 +18,6 @@ import com.example.seckilldemo.vo.SeckillMessage;
 import com.wf.captcha.ArithmeticCaptcha;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import io.swagger.models.auth.In;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,6 +61,8 @@ public class SecKillController implements InitializingBean {
     private RedisTemplate redisTemplate;
     @Autowired
     private MQSender mqSender;
+    @Autowired
+    private RedisScript<Long> stockScript;
 
     private Map<Long, Boolean> emptystockMap = new HashMap<Long, Boolean>();
 
@@ -105,18 +106,22 @@ public class SecKillController implements InitializingBean {
         if (tuser == null) {
             return RespBean.error(RespBeanEnum.SESSION_ERROR);
         }
-//        ValueOperations valueOperations = redisTemplate.opsForValue();
+
+        /**
+         * 限流（转移到注解@AccessLimit和拦截器AccessLimitInterceptor中）
+         */
+        /*ValueOperations valueOperations = redisTemplate.opsForValue();
         //限制访问次数，5秒内访问5次
-//        String uri = request.getRequestURI();
-//        captcha = "0";
-//        Integer count = (Integer) valueOperations.get(uri + ":" + tuser.getId());
-//        if (count == null) {
-//            valueOperations.set(uri + ":" + tuser.getId(), 1, 5, TimeUnit.SECONDS);
-//        } else if (count < 5) {
-//            valueOperations.increment(uri + ":" + tuser.getId());
-//        } else {
-//            return RespBean.error(RespBeanEnum.ACCESS_LIMIT_REACHED);
-//        }
+        String uri = request.getRequestURI();
+        captcha = "0";
+        Integer count = (Integer) valueOperations.get(uri + ":" + tuser.getId());
+        if (count == null) {
+            valueOperations.set(uri + ":" + tuser.getId(), 1, 5, TimeUnit.SECONDS);
+        } else if (count < 5) {
+            valueOperations.increment(uri + ":" + tuser.getId());
+        } else {
+            return RespBean.error(RespBeanEnum.ACCESS_LIMIT_REACHED);
+        }*/
 
 
         boolean check = orderService.checkCaptcha(tuser, goodsId, captcha);
@@ -268,9 +273,9 @@ public class SecKillController implements InitializingBean {
      * @date 11:36 上午 2022/3/4
      **/
     @ApiOperation("秒杀功能")
-    @RequestMapping(value = "/doSeckill3.0", method = RequestMethod.POST)
+    @RequestMapping(value = "/{path}/doSeckill3.0", method = RequestMethod.POST)
     @ResponseBody
-    public RespBean doSecKill3(Model model, TUser user, Long goodsId) {
+    public RespBean doSecKill3(@PathVariable String path, TUser user, Long goodsId) {
 
         // 校验登陆用户
         if(user == null) {
@@ -279,19 +284,26 @@ public class SecKillController implements InitializingBean {
 
         ValueOperations valueOperations = redisTemplate.opsForValue();
 
+        // 判断秒杀地址
+        boolean check = orderService.checkPath(user, goodsId, path);
+        if(!check) {
+            return RespBean.error(RespBeanEnum.REQUEST_ILLEGAL); // 请求非法
+        }
+
         // 判断是否重复抢购
         TSeckillOrder seckillOrder = (TSeckillOrder)redisTemplate.opsForValue().get("order" + user.getId()+":"+goodsId);
         if (seckillOrder != null) {
-            model.addAttribute("errmsg", RespBeanEnum.REPEATE_ERROR.getMessage());
             return RespBean.error(RespBeanEnum.REPEATE_ERROR);
         }
+
         // 通过内存标记减少redis访问
         if(emptystockMap.get(goodsId)) {
             return RespBean.error(RespBeanEnum.EMPTY_STOCK);
         }
 
         // 预减库存
-        long stock = valueOperations.decrement("seckillGoods:" + goodsId);
+        //long stock = valueOperations.decrement("seckillGoods:" + goodsId);
+        long stock = (Long)redisTemplate.execute(stockScript, Collections.singletonList("seckillGoods:" + goodsId), Collections.EMPTY_LIST);
         if(stock < 0) {
             emptystockMap.put(goodsId, true); // true代表没有库存
             valueOperations.increment("seckillGoods:" + goodsId);
@@ -322,6 +334,5 @@ public class SecKillController implements InitializingBean {
             redisTemplate.opsForValue().set("seckillGoods:" + goodsVo.getId(), goodsVo.getStockCount());
             emptystockMap.put(goodsVo.getId(), false); // false代表有库存（预减库存的时候设置为true）
         });
-
     }
 }

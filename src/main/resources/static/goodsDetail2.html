@@ -110,8 +110,8 @@
     //秒杀方法
     function doSecKill(path) {
         $.ajax({
-            url: '/seckill/doSeckill3.0',
-            // url: 'seckill/' + path + '/doSeckill',
+            // url: '/seckill/doSeckill3.0',
+            url: 'seckill/' + path + '/doSeckill3.0',
             type: "POST",
             data: {
                 goodsId: $('#goodsId').val()
