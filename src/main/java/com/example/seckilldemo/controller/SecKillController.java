@@ -64,6 +64,7 @@ public class SecKillController implements InitializingBean {
     @Autowired
     private RedisScript<Long> stockScript;
 
+    // 内存标记
     private Map<Long, Boolean> emptystockMap = new HashMap<Long, Boolean>();
 
     @ApiOperation("获取验证码")
