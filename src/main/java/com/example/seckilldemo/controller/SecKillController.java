@@ -60,68 +60,13 @@ public class SecKillController implements InitializingBean {
     private ITOrderService orderService;
     @Autowired
     private RedisTemplate redisTemplate;
+    @Autowired
+    private MQSender mqSender;
+    @Autowired
+    private RedisScript<Long> stockScript;
 
-    @ApiOperation("获取验证码")
-    @GetMapping(value = "/captcha")
-    public void verifyCode(TUser tUser, Long goodsId, HttpServletResponse response) {
-        if (tUser == null || goodsId < 0) {
-            throw new GlobalException(RespBeanEnum.REQUEST_ILLEGAL);
-        }
-        //设置请求头为输出图片的类型
-        response.setContentType("image/jpg");
-        response.setHeader("Pargam", "No-cache");
-        response.setHeader("Cache-Control", "no-cache");
-        response.setDateHeader("Expires", 0);
-        //生成验证码
-        ArithmeticCaptcha captcha = new ArithmeticCaptcha(130, 32, 3);
-        redisTemplate.opsForValue().set("captcha:" + tUser.getId() + ":" + goodsId, captcha.text(), 300, TimeUnit.SECONDS);
-        try {
-            captcha.out(response.getOutputStream());
-        } catch (IOException e) {
-            log.error("验证码生成失败", e.getMessage());
-        }
-    }
-
-    /**
-     * 获取秒杀地址
-     *
-     * @param tuser
-     * @param goodsId
-     * @param captcha
-     * @return com.example.seckilldemo.vo.RespBean
-     * @author LiChao
-     * @operation add
-     * @date 4:04 下午 2022/3/9
-     **/
-    @ApiOperation("获取秒杀地址")
-    @AccessLimit(second = 5, maxCount = 5, needLogin = true)
-    @GetMapping(value = "/path")
-    @ResponseBody
-    public RespBean getPath(TUser tuser, Long goodsId, String captcha, HttpServletRequest request) {
-        if (tuser == null) {
-            return RespBean.error(RespBeanEnum.SESSION_ERROR);
-        }
-//        ValueOperations valueOperations = redisTemplate.opsForValue();
-        //限制访问次数，5秒内访问5次
-//        String uri = request.getRequestURI();
-//        captcha = "0";
-//        Integer count = (Integer) valueOperations.get(uri + ":" + tuser.getId());
-//        if (count == null) {
-//            valueOperations.set(uri + ":" + tuser.getId(), 1, 5, TimeUnit.SECONDS);
-//        } else if (count < 5) {
-//            valueOperations.increment(uri + ":" + tuser.getId());
-//        } else {
-//            return RespBean.error(RespBeanEnum.ACCESS_LIMIT_REACHED);
-//        }
-
-
-        boolean check = orderService.checkCaptcha(tuser, goodsId, captcha);
-        if (!check) {
-            return RespBean.error(RespBeanEnum.ERROR_CAPTCHA);
-        }
-        String str = orderService.createPath(tuser, goodsId);
-        return RespBean.success(str);
-    }
+    // 内存标记
+    private Map<Long, Boolean> emptystockMap = new HashMap<Long, Boolean>();
 
 
     /**
@@ -196,7 +141,7 @@ public class SecKillController implements InitializingBean {
     }
 
     /**
-     * 秒杀功能
+     * 秒杀功能(预减库存)
      *
      * 优化以前QPS：1783
      *
@@ -209,7 +154,7 @@ public class SecKillController implements InitializingBean {
      * @operation add
      * @date 11:36 上午 2022/3/4
      **/
-    @ApiOperation("秒杀功能-废弃")
+    @ApiOperation("秒杀功能")
     @RequestMapping(value = "/doSeckill2.0", method = RequestMethod.POST)
     @ResponseBody
     public RespBean doSecKill2(Model model, TUser user, Long goodsId) {
@@ -248,8 +193,75 @@ public class SecKillController implements InitializingBean {
         return RespBean.success(tOrder);
     }
 
+    /**
+     * 秒杀功能3。0（服务接口优化：预减库存，异步下单，内存标记）
+     *
+     * 优化以前QPS：1783
+     * 优化以后QPS：2666
+     * 消息队列QPS：3337
+     *
+     * @param user
+     * @param goodsId
+     * @return java.lang.String
+     * @author LC
+     * @operation add
+     * @date 11:36 上午 2022/3/4
+     **/
+    @ApiOperation("秒杀功能")
+    @RequestMapping(value = "/doSeckill3.0", method = RequestMethod.POST)
+    @ResponseBody
+    public RespBean doSecKill3(TUser user, Long goodsId) {
+
+        // 校验登陆用户
+        if(user == null) {
+            return RespBean.error(RespBeanEnum.SESSION_ERROR);
+        }
+
+        ValueOperations valueOperations = redisTemplate.opsForValue();
+
+        // 判断是否重复抢购
+        TSeckillOrder seckillOrder = (TSeckillOrder)redisTemplate.opsForValue().get("order" + user.getId()+":"+goodsId);
+        if (seckillOrder != null) {
+            return RespBean.error(RespBeanEnum.REPEATE_ERROR);
+        }
+
+        // 通过内存标记减少redis访问
+        if(emptystockMap.get(goodsId)) {
+            return RespBean.error(RespBeanEnum.EMPTY_STOCK);
+        }
+
+        // 预减库存
+        //long stock = valueOperations.decrement("seckillGoods:" + goodsId);
+        long stock = (Long)redisTemplate.execute(stockScript, Collections.singletonList("seckillGoods:" + goodsId), Collections.EMPTY_LIST);
+        if(stock < 0) {
+            emptystockMap.put(goodsId, true); // true代表没有库存
+            valueOperations.increment("seckillGoods:" + goodsId);
+            return RespBean.error(RespBeanEnum.EMPTY_STOCK);
+        }
+
+        // 下单（rabbitMQ）
+        SeckillMessage seckillMessage = new SeckillMessage(user,goodsId);
+        mqSender.sendSeckillMessage(JsonUtil.object2JsonStr(seckillMessage));
+
+        System.out.println("》》》》》》》》》》》》》》》》》 秒杀成功3.0");
+
+        // 订单详情页
+        return RespBean.success(0);
+    }
+
+    /**
+     * 系统初始化，把商品库存数量家在到redis中
+     * @throws Exception
+     */
     @Override
     public void afterPropertiesSet() throws Exception {
-
+        List<GoodsVo> goodsVoList = itGoodsService.findGoodsVo();
+        if(CollectionUtils.isEmpty(goodsVoList)) {
+            return;
+        }
+        goodsVoList.forEach(goodsVo -> {
+            redisTemplate.opsForValue().set("seckillGoods:" + goodsVo.getId(), goodsVo.getStockCount());
+            emptystockMap.put(goodsVo.getId(), false); // false代表有库存（预减库存的时候设置为true）
+        });
     }
 }

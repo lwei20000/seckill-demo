@@ -121,7 +121,7 @@ public class GoodsController {
     }
 
     /**
-     * 商品列表页1。4
+     * 商品列表页1。4（页面缓存）
      * QPS：2426
      *
      * @param model
@@ -193,7 +193,7 @@ public class GoodsController {
     }
 
     /**
-     * 商品详情页1.2
+     * 商品详情页1.2（页面缓存）
      * @param model
      * @param user
      * @param goodsId
@@ -245,7 +245,7 @@ public class GoodsController {
     }
 
     /**
-     * 商品详情页1.3 （页面静态化对应的接口）
+     * 商品详情页1.3 （页面静态化（一共三个页面：商品详情、秒杀页面、订单详情））
      *
      * @param user
      * @param goodsId

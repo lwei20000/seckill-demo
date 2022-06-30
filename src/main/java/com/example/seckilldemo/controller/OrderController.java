@@ -24,13 +24,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/order")
 @Api(value = "订单", tags = "订单")
-public class TOrderController {
+public class OrderController {
 
     @Autowired
     private ITOrderService itOrderService;
 
     /**
-     * 订单详情
+     * 订单详情(页面静态化)
      * @param tUser
      * @param orderId
      * @return
